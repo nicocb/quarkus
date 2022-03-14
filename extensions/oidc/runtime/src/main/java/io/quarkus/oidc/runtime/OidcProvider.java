@@ -103,7 +103,10 @@ public class OidcProvider implements Closeable {
         builder.setJwsAlgorithmConstraints(algConstraints);
 
         builder.setRequireExpirationTime();
-        builder.setRequireIssuedAt();
+
+        if (oidcConfig.token.iatRequired) {
+            builder.setRequireIssuedAt();
+        }
 
         if (issuer != null) {
             builder.setExpectedIssuer(issuer);

@@ -934,6 +934,12 @@ public class OidcTenantConfig extends OidcCommonConfig {
         @ConfigItem(defaultValue = "true")
         public boolean allowOpaqueTokenIntrospection = true;
 
+        /**
+         * Requires the iat claim inside the JWT token.
+         */
+        @ConfigItem(defaultValue = "true")
+        public boolean iatRequired = true;
+
         public Optional<String> getIssuer() {
             return issuer;
         }
@@ -1020,6 +1026,14 @@ public class OidcTenantConfig extends OidcCommonConfig {
 
         public void setAllowOpaqueTokenIntrospection(boolean allowOpaqueTokenIntrospection) {
             this.allowOpaqueTokenIntrospection = allowOpaqueTokenIntrospection;
+        }
+
+        public boolean isIatRequired() {
+            return iatRequired;
+        }
+
+        public void setIatRequired(boolean iatRequired) {
+            this.iatRequired = iatRequired;
         }
     }
 

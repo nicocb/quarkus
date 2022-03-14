@@ -1,6 +1,7 @@
 package io.quarkus.it.keycloak;
 
 import java.security.PublicKey;
+import java.util.UUID;
 
 import javax.annotation.PostConstruct;
 import javax.ws.rs.FormParam;
@@ -12,6 +13,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 
+import org.eclipse.microprofile.jwt.Claims;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jose4j.jwk.JsonWebKeySet;
 import org.jose4j.jwk.RsaJsonWebKey;
@@ -23,6 +25,9 @@ import io.smallrye.jwt.auth.principal.JWTAuthContextInfo;
 import io.smallrye.jwt.auth.principal.JWTParser;
 import io.smallrye.jwt.build.Jwt;
 import io.smallrye.jwt.util.KeyUtils;
+import org.jose4j.jws.JsonWebSignature;
+import org.jose4j.jwt.JwtClaims;
+import org.jose4j.jwt.NumericDate;
 
 @Path("oidc")
 public class OidcResource {
@@ -32,6 +37,7 @@ public class OidcResource {
     RsaJsonWebKey key;
     private volatile boolean introspection;
     private volatile boolean rotate;
+    private volatile boolean enableCustomJwt;
     private volatile int jwkEndpointCallCount;
     private volatile int introspectionEndpointCallCount;
     private volatile int userInfoEndpointCallCount;
@@ -216,13 +222,42 @@ public class OidcResource {
         return rotate;
     }
 
+    @POST
+    @Path("enable-custom-jwt")
+    public boolean enableCustomJwt() {
+        enableCustomJwt = true;
+        return enableCustomJwt;
+    }
+
     private String jwt(String kid) {
-        return Jwt.claims()
+        return enableCustomJwt?customJwt(kid):Jwt.claims()
                 .claim("typ", "Bearer")
                 .upn("alice")
                 .preferredUserName("alice")
                 .groups("user")
                 .jws().keyId(kid)
                 .sign(key.getPrivateKey());
+    }
+
+    private String customJwt(String kid) {
+        JwtClaims claims = new JwtClaims();
+        claims.setClaim("typ", "Bearer");
+        claims.setClaim(Claims.upn.name(),"alice");
+        claims.setClaim(Claims.preferred_username.name(),"alice");
+        claims.setClaim(Claims.groups.name(),"user");
+        claims.setExpirationTime(NumericDate.fromSeconds( System.currentTimeMillis() / 1000 + 300));
+        claims.setClaim(Claims.jti.name(), UUID.randomUUID().toString());
+        JsonWebSignature jws = new JsonWebSignature();
+        jws.setHeader("kid",kid);
+        jws.setHeader("typ", "JWT");
+        jws.setAlgorithmHeaderValue("RS256");
+        jws.setPayload(claims.toJson());
+        jws.setKey(key.getPrivateKey());
+
+        try {
+            return jws.getCompactSerialization();
+        } catch (Exception ex) {
+            throw new IllegalAccessError("Could not sign message");
+        }
     }
 }

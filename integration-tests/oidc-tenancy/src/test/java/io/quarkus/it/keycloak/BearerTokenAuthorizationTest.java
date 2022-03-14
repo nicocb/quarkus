@@ -497,6 +497,34 @@ public class BearerTokenAuthorizationTest {
         }
     }
 
+    @Test
+    public void testJwtWithoutIat() {
+        RestAssured.when().post("/oidc/jwk-endpoint-call-count").then().body(equalTo("0"));
+        RestAssured.when().post("/oidc/disable-introspection").then().body(equalTo("false"));
+        RestAssured.when().post("/oidc/disable-rotate").then().body(equalTo("false"));
+
+        RestAssured.given().auth().oauth2(getAccessTokenFromSimpleOidc("1"))
+                        .when().get("/tenant/tenant-oidc/api/user")
+                        .then()
+                        .statusCode(200)
+                        .body(equalTo("tenant-oidc:alice"));
+
+        // Now get a token with no IAT
+        RestAssured.when().post("/oidc/enable-custom-jwt").then().body(equalTo("true"));
+        // Authentication fails because claim is not there on default tenant
+        RestAssured.given().auth().oauth2(getAccessTokenFromSimpleOidc("1"))
+                        .when().get("/tenant/tenant-oidc/api/user")
+                        .then()
+                        .statusCode(401);
+
+        // Authentication ok on specific tenant
+        RestAssured.given().auth().oauth2(getAccessTokenFromSimpleOidc("1"))
+                        .when().get("/tenant/tenant-oidc-no-iat/api/user")
+                        .then()
+                        .statusCode(200)
+                        .body(equalTo("tenant-oidc-no-iat:alice"));
+    }
+
     private String getAccessToken(String userName, String clientId) {
         return getAccessToken(userName, clientId, clientId);
     }

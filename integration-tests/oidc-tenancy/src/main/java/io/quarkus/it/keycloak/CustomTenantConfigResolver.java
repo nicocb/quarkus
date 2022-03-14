@@ -119,6 +119,17 @@ public class CustomTenantConfigResolver implements TenantConfigResolver {
                     config.setAllowUserInfoCache(false);
                     config.setApplicationType(ApplicationType.WEB_APP);
                     return config;
+                } else if ("tenant-oidc-no-iat".equals(tenantId)) {
+                    OidcTenantConfig config = new OidcTenantConfig();
+                    config.setTenantId("tenant-oidc-no-iat");
+                    String uri = context.request().absoluteURI();
+                    String authServerUri = uri.replace("/tenant/tenant-oidc-no-iat/api/user", "/oidc");
+                    config.setAuthServerUrl(authServerUri);
+                    config.setDiscoveryEnabled(false);
+                    config.setJwksPath("jwks");
+                    config.setClientId("client");
+                    config.token.setIatRequired(false);
+                    return config;
                 }
                 return null;
             }
